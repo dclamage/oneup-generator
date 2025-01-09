@@ -167,8 +167,7 @@
 		/************************************************************
 		 *  We'll define N and our grid globally for simplicity
 		 ************************************************************/
-		const N = 8;         // Grid size
-		const MAX_ITER = 10000 * N; // Maximum iterations to run
+		const N = 7;         // Grid size
 		let iterationCount = 0;
 		let grid = Array.from({ length: N }, () => Array(N).fill(1));
 
@@ -464,7 +463,7 @@
 			return getLargestValue(grid) > N - 2 && !hasIslands(grid);
 		}
 
-		function runGeneration()
+		async function runGeneration()
 		{
 			while (true)
 			{
@@ -474,6 +473,8 @@
 
 				// Run a single generation
 				runSingleGeneration();
+
+				await new Promise(r => setTimeout(r, 0));
 
 				// Check if the grid is good
 				if (isGoodGrid(grid))
