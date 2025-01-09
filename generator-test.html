@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<title>One Up Puzzle Visualizer</title>
+
+	<style>
+		body {
+			font-family: sans-serif;
+			margin: 20px;
+		}
+
+		table {
+			border-collapse: collapse;
+		}
+
+		td {
+			width: 80px;
+			height: 80px;
+			text-align: center;
+			vertical-align: middle;
+			border: 1px solid #ccc;
+			font-size: 36px;
+		}
+
+		/* Thicker segment boundary styles */
+		.segment-left {
+			border-left: 3px solid #000 !important;
+		}
+
+		.segment-top {
+			border-top: 3px solid #000 !important;
+		}
+
+		.segment-right {
+			border-right: 3px solid #000 !important;
+		}
+
+		.segment-bottom {
+			border-bottom: 3px solid #000 !important;
+		}
+
+		#controls {
+			margin-bottom: 10px;
+		}
+
+		#iterationCount {
+			font-weight: bold;
+		}
+	</style>
+</head>
+
+<body>
+
+	<div id="controls">
+		<button id="iterateBtn">Generate</button>
+		<span>Iterations to generate: <span id="iterationCount">0</span></span>
+	</div>
+
+	<div id="gridContainer"></div>
+
+	<script>
+		/************************************************************
+		 *  Utility: segmentLine(line)
+		 *  Greedily splits a 1D array (line) into segments whenever
+		 *  a repeated digit is encountered, starting a new segment
+		 *  at that digit. Returns an array of segments.
+		 ************************************************************/
+		function segmentLine(line)
+		{
+			const segments = [];
+			let currentSegment = [];
+			let seen = new Set();
+
+			for (const digit of line)
+			{
+				if (seen.has(digit))
+				{
+					// Close off the current segment
+					segments.push(currentSegment);
+					// Start a new segment with the repeated digit
+					currentSegment = [digit];
+					seen.clear();
+					seen.add(digit);
+				} else
+				{
+					currentSegment.push(digit);
+					seen.add(digit);
+				}
+			}
+			if (currentSegment.length > 0)
+			{
+				segments.push(currentSegment);
+			}
+			return segments;
+		}
+
+		/************************************************************
+		 *  Utility: isSegmentValid(segment)
+		 *  A segment of length M is valid if it contains exactly
+		 *  the digits [1..M].
+		 ************************************************************/
+		function isSegmentValid(segment)
+		{
+			const M = segment.length;
+			// If any digit is outside [1..M], it's invalid
+			if (segment.some(d => d < 1 || d > M))
+			{
+				return false;
+			}
+			// Must have exactly M distinct digits
+			const uniqueDigits = new Set(segment);
+			return (uniqueDigits.size === M);
+		}
+
+		/************************************************************
+		 *  Utility: checkLineValidity(line)
+		 *  Splits into segments, checks each segment for validity.
+		 ************************************************************/
+		function checkLineValidity(line)
+		{
+			const segments = segmentLine(line);
+			for (const seg of segments)
+			{
+				if (!isSegmentValid(seg))
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+
+		/************************************************************
+		 *  Check a single row for validity
+		 ************************************************************/
+		function checkRow(grid, r)
+		{
+			return checkLineValidity(grid[r]);
+		}
+
+		/************************************************************
+		 *  Check a single column for validity
+		 ************************************************************/
+		function checkColumn(grid, c)
+		{
+			const col = grid.map(row => row[c]);
+			return checkLineValidity(col);
+		}
+
+		/************************************************************
+		 *  We'll define N and our grid globally for simplicity
+		 ************************************************************/
+		const N = 8;         // Grid size
+		const MAX_ITER = 10000 * N; // Maximum iterations to run
+		let iterationCount = 0;
+		let grid = Array.from({ length: N }, () => Array(N).fill(1));
+
+		/************************************************************
+		 *  Compute segment boundaries for drawing thick borders.
+		 *  rowBoundaries[r][c] = true if there's a vertical boundary
+		 *  to the left of cell (r,c). colBoundaries[r][c] = true if
+		 *  there's a horizontal boundary above cell (r,c).
+		 ************************************************************/
+		function computeBoundaries()
+		{
+			const rowBoundaries = Array.from({ length: N }, () => Array(N).fill(false));
+			const colBoundaries = Array.from({ length: N }, () => Array(N).fill(false));
+
+			// For each row, figure out where a new segment starts
+			for (let r = 0; r < N; r++)
+			{
+				const row = grid[r];
+				let seen = new Set();
+				// We always consider a boundary at column 0
+				// to highlight left edge more distinctly
+				rowBoundaries[r][0] = true;
+				for (let c = 0; c < N; c++)
+				{
+					const digit = row[c];
+					if (seen.has(digit) && c > 0)
+					{
+						// A new segment starts at col c
+						rowBoundaries[r][c] = true;
+						// Reset the set
+						seen.clear();
+					}
+					seen.add(digit);
+				}
+			}
+
+			// For each column, figure out where a new segment starts
+			for (let c = 0; c < N; c++)
+			{
+				let seen = new Set();
+				// Mark top boundary for each column as well
+				colBoundaries[0][c] = true;
+				for (let r = 0; r < N; r++)
+				{
+					const digit = grid[r][c];
+					if (seen.has(digit) && r > 0)
+					{
+						// A new segment starts at row r
+						colBoundaries[r][c] = true;
+						// Reset the set
+						seen.clear();
+					}
+					seen.add(digit);
+				}
+			}
+
+			return { rowBoundaries, colBoundaries };
+		}
+
+		/************************************************************
+		 *  Render the grid as an HTML table with thick borders
+		 *  between segments.
+		 ************************************************************/
+		function renderGrid()
+		{
+			const container = document.getElementById('gridContainer');
+			container.innerHTML = ''; // clear old table
+
+			const { rowBoundaries, colBoundaries } = computeBoundaries();
+
+			const table = document.createElement('table');
+
+			for (let r = 0; r < N; r++)
+			{
+				const tr = document.createElement('tr');
+				for (let c = 0; c < N; c++)
+				{
+					const td = document.createElement('td');
+					td.textContent = grid[r][c];
+
+					// If rowBoundaries[r][c] is true, we apply a thick left border
+					if (rowBoundaries[r][c])
+					{
+						td.classList.add('segment-left');
+					}
+					// If colBoundaries[r][c] is true, we apply a thick top border
+					if (colBoundaries[r][c])
+					{
+						td.classList.add('segment-top');
+					}
+
+					// The final row and column always have thick borders
+					if (r === N - 1)
+					{
+						td.classList.add('segment-bottom');
+					}
+					if (c === N - 1)
+					{
+						td.classList.add('segment-right');
+					}
+					tr.appendChild(td);
+				}
+				table.appendChild(tr);
+			}
+			container.appendChild(table);
+		}
+
+		function getLargestViableValue(grid, r, c, largestValue)
+		{
+			const oldValue = grid[r][c];
+			for (let newValue = largestValue; newValue > oldValue; newValue--)
+			{
+				// Temporarily assign
+				grid[r][c] = newValue;
+
+				// Check row & column
+				let isValid = checkRow(grid, r) && checkColumn(grid, c);
+
+				// Revert
+				grid[r][c] = oldValue;
+
+				if (isValid)
+				{
+					return newValue;
+				}
+			}
+			return 0;
+		}
+
+		function getLargestValue(grid) {
+			let largestValue = 0;
+			for (let r = 0; r < N; r++) {
+				for (let c = 0; c < N; c++) {
+					largestValue = Math.max(largestValue, grid[r][c]);
+				}
+			}
+			return largestValue;
+		}
+
+		function isGoodGrid(grid)
+		{
+			return true;
+		}
+
+		function runGeneration()
+		{
+			while (true)
+			{
+				// Reset the iteration count
+				iterationCount = 0;
+				document.getElementById('iterationCount').textContent = iterationCount;
+
+				// Run a single generation
+				runSingleGeneration();
+
+				// Check if the grid is good
+				if (isGoodGrid(grid))
+				{
+					return;
+				}
+			}
+		}
+
+		/************************************************************
+		 *  Increase a single cell's value at random by 1..(N - oldValue)
+		 *  and check row/col validity. If invalid, revert.
+		 ************************************************************/
+		function runSingleGeneration()
+		{
+			// Reset the grid
+			grid = Array.from({ length: N }, () => Array(N).fill(1));
+
+			while (true)
+			{
+				// Find the largest value currently placed
+				let largestValue = 0;
+				for (let r = 0; r < N; r++)
+				{
+					for (let c = 0; c < N; c++)
+					{
+						largestValue = Math.max(largestValue, grid[r][c]);
+					}
+				}
+
+				// The largest possible value in the grid is one larger than the largest placed, capped at N
+				if (largestValue < N)
+				{
+					largestValue++;
+				}
+
+				let candidates = [];
+				let largestViableValue = 0;
+				for (let r = 0; r < N; r++)
+				{
+					for (let c = 0; c < N; c++)
+					{
+						const curLargestViableValue = getLargestViableValue(grid, r, c, largestValue);
+						if (curLargestViableValue > 0)
+						{
+							if (curLargestViableValue > largestViableValue)
+							{
+								candidates = [];
+								largestViableValue = curLargestViableValue;
+							}
+							else if (curLargestViableValue < largestViableValue)
+							{
+								continue;
+							}
+
+							candidates.push([r, c, curLargestViableValue]);
+						}
+					}
+				}
+
+				// If no candidates, we're done
+				if (candidates.length === 0)
+				{
+					break;
+				}
+
+				// Randomly pick one cell
+				const [r, c, newValue] = candidates[Math.floor(Math.random() * candidates.length)];
+				grid[r][c] = newValue;
+				success = true;
+
+				iterationCount++;
+				document.getElementById('iterationCount').textContent = iterationCount;
+			}
+
+			// Re-render after the attempt
+			renderGrid();
+		}
+
+		/************************************************************
+		 *  Set up the page on load
+		 ************************************************************/
+		window.onload = function ()
+		{
+			// Initial render
+			renderGrid();
+
+			// Button click -> run one iteration
+			document.getElementById('iterateBtn').addEventListener('click', runGeneration);
+		};
+	</script>
+
+</body>
+
+</html>
