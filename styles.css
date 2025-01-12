@@ -1,0 +1,110 @@
+/* General styles */
+body {
+	font-family: 'Arial', sans-serif;
+	line-height: 1.6;
+	margin: 20px;
+	color: #333;
+	background-color: #f4f4f4;
+}
+
+table {
+	margin-top: 20px;
+	border-collapse: collapse;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+td {
+	width: 80px;
+	height: 80px;
+	text-align: center;
+	vertical-align: middle;
+	border: 1px solid #ccc;
+	font-size: 36px;
+}
+
+/* Thicker segment boundary styles */
+.segment-left {
+	border-left: 3px solid #000 !important;
+}
+
+.segment-top {
+	border-top: 3px solid #000 !important;
+}
+
+.segment-right {
+	border-right: 3px solid #000 !important;
+}
+
+.segment-bottom {
+	border-bottom: 3px solid #000 !important;
+}
+
+/* Controls form container */
+#controls {
+	margin-bottom: 20px;
+	padding: 20px;
+	background: #fff;
+	border: 1px solid #ccc;
+	border-radius: 10px;
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+	max-width: 400px;
+	margin: 0 auto;
+	/* Center the form on the page */
+}
+
+#puzzle-form {
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+}
+
+/* Form group styling */
+.form-group {
+	display: flex;
+	flex-direction: column;
+}
+
+label {
+	font-weight: bold;
+	margin-bottom: 5px;
+}
+
+input[type="number"],
+select {
+	padding: 8px;
+	border: 1px solid #ccc;
+	border-radius: 5px;
+	font-size: 16px;
+	width: 100%;
+	box-sizing: border-box;
+	/* Ensure consistent padding inside the box */
+}
+
+button {
+	background-color: #007BFF;
+	color: white;
+	border: none;
+	border-radius: 5px;
+	padding: 10px;
+	cursor: pointer;
+	font-size: 16px;
+	transition: background-color 0.3s ease;
+	text-align: center;
+}
+
+button:hover {
+	background-color: #0056b3;
+}
+
+/* Add responsiveness for smaller screens */
+@media (max-width: 600px) {
+	#controls {
+		padding: 15px;
+	}
+
+	button {
+		font-size: 14px;
+		padding: 8px;
+	}
+}
